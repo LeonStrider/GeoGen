@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>GEO</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    textarea { width: 100%; height: 100px; margin-bottom: 10px; }
+    button {
+      padding: 8px 16px;
+      margin: 5px 5px 10px 0;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      white-space: nowrap;
+      width: 120px;
+      transition: background-color 0.3s ease;
+    }
+    button:hover:enabled { background-color: #0056b3; }
+    button:disabled {
+      background-color: #a0a0a0;
+    }
+    button.copied {
+      background-color: #28a745 !important;
+    }
+    #output { height: 80px; }
+    #counter { font-size: 14px; margin-top: 5px; color: #333; }
+    #filenameInput {
+      width: 200px;
+      padding: 5px;
+      margin-bottom: 10px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <h2>Geo Generator</h2>
+
+  <textarea id="inputText" placeholder="Вставьте текст..."></textarea><br>
+
+  <!-- Поле для ввода имени файла -->
+  <input type="text" id="filenameInput" placeholder="Имя файла CSV" />
+
+  <br>
+  <!-- Кнопки управления -->
+  <button id="copyBtn" onclick="copyResult()">Копировать</button>
+  <button id="downloadBtn" onclick="downloadCSVFromInput()" disabled>Скачать CSV</button>
+
+  <br><br>
+  <textarea id="output" readonly placeholder="Здесь появятся ISO-коды стран"></textarea>
+  <div id="counter">Найдено стран: 0</div>
+
+  <script>
+    const countryAliases = {
+      "russia": "RU", "россия": "RU", "ru": "RU",
+      "germany": "DE", "германия": "DE", "de": "DE",
+      "france": "FR", "франция": "FR", "fr": "FR",
+      "united states": "US", "usa": "US", "us": "US", "сша": "US",
+      "china": "CN", "китай": "CN", "cn": "CN"
+    };
+
+    const filenameInput = document.getElementById("filenameInput");
+    const downloadBtn = document.getElementById("downloadBtn");
+
+    // Функция для извлечения стран из текста
+    function extractCountries() {
+      const text = document.getElementById("inputText").value.toLowerCase();
+      let found = new Set();
+
+      for (let [alias, code] of Object.entries(countryAliases)) {
+        const regex = new RegExp("(^|\\s|\\,|\\.|\\!|\\?|\\:)" + alias + "($|\\s|\\,|\\.|\\!|\\?|\\:)", "i");
+        if (regex.test(text)) {
+          found.add(code);
+        }
+      }
+
+      document.getElementById("output").value =
+        found.size ? Array.from(found).join(" ") : "";
+
+      document.getElementById("counter").innerText =
+        "Найдено стран: " + found.size;
+    }
+
+    // Функция копирования в буфер обмена
+    function copyResult() {
+      const output = document.getElementById("output");
+      const copyBtn = document.getElementById("copyBtn");
+
+      if (output.value.trim() !== "") {
+        navigator.clipboard.writeText(output.value).then(() => {
+          const originalText = copyBtn.innerText;
+          copyBtn.innerText = "Скопировано";
+          copyBtn.classList.add("copied");
+
+          setTimeout(() => {
+            copyBtn.innerText = originalText;
+            copyBtn.classList.remove("copied");
+          }, 1500);
+        });
+      }
+    }
+
+    // Функция создания CSV
+    function downloadCSV(filename) {
+      const output = document.getElementById("output").value.trim();
+      if (!output) return alert("Нет данных для экспорта");
+
+      const countries = output.split(" ");
+      let csvContent = "Geo;Rate\n";
+
+      countries.forEach(code => {
+        csvContent += `${code};0,001\n`;
+      });
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", filename + ".csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Функция, вызываемая кнопкой "Скачать CSV"
+    function downloadCSVFromInput() {
+      const filename = filenameInput.value.trim();
+      if (!filename) {
+        alert("Введите имя файла");
+        return;
+      }
+      downloadCSV(filename);
+    }
+
+    // Включение кнопки "Скачать CSV" только при заполнении имени файла
+    filenameInput.addEventListener("input", () => {
+      downloadBtn.disabled = filenameInput.value.trim() === "";
+    });
+
+    // Обновление стран при вводе текста
+    document.getElementById("inputText").addEventListener("input", extractCountries);
+  </script>
+</body>
+</html>

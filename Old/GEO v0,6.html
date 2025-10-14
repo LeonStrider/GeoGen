@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>GEO</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    textarea { width: 100%; height: 100px; margin-bottom: 10px; }
+    button {
+      padding: 8px 16px;
+      margin: 5px 5px 10px 0;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      white-space: nowrap;
+      width: 120px;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    button.copied {
+      background-color: #28a745 !important;
+      transform: scale(1.05);
+    }
+    #output { height: 80px; }
+    #counter { font-size: 14px; margin-top: 5px; color: #333; }
+  </style>
+</head>
+<body>
+  <h2>Geo Generator</h2>
+
+  <!-- Поле ввода текста -->
+  <textarea id="inputText" placeholder="Вставьте текст..."></textarea><br>
+
+  <!-- Кнопки -->
+  <button id="copyBtn" onclick="copyResult()">Копировать</button>
+  <button onclick="downloadCSV()">Скачать CSV</button><br>
+
+  <!-- Вывод результата -->
+  <textarea id="output" readonly placeholder="Здесь появятся ISO-коды стран"></textarea>
+
+  <!-- Счётчик -->
+  <div id="counter">Найдено стран: 0</div>
+
+  <script>
+    const countryAliases = {
+      "russia": "RU", "россия": "RU", "ru": "RU",
+      "germany": "DE", "германия": "DE", "de": "DE",
+      "france": "FR", "франция": "FR", "fr": "FR",
+      "united states": "US", "usa": "US", "us": "US", "сша": "US",
+      "china": "CN", "китай": "CN", "cn": "CN"
+    };
+
+    // Функция поиска стран
+    function extractCountries() {
+      const text = document.getElementById("inputText").value.toLowerCase();
+      let found = new Set();
+
+      for (let [alias, code] of Object.entries(countryAliases)) {
+        const regex = new RegExp("(^|\\s|\\,|\\.|\\!|\\?|\\:)" + alias + "($|\\s|\\,|\\.|\\!|\\?|\\:)", "i");
+        if (regex.test(text)) {
+          found.add(code);
+        }
+      }
+
+      document.getElementById("output").value =
+        found.size ? Array.from(found).join(" ") : "";
+
+      document.getElementById("counter").innerText =
+        "Найдено стран: " + found.size;
+    }
+
+    // Функция копирования результата
+    function copyResult() {
+      const output = document.getElementById("output");
+      const copyBtn = document.getElementById("copyBtn");
+
+      if (output.value.trim() !== "") {
+        navigator.clipboard.writeText(output.value).then(() => {
+          const originalText = copyBtn.innerText;
+          copyBtn.innerText = "Скопировано";
+          copyBtn.classList.add("copied");
+
+          setTimeout(() => {
+            copyBtn.innerText = originalText;
+            copyBtn.classList.remove("copied");
+          }, 1500);
+        });
+      }
+    }
+
+    // Функция создания и скачивания CSV
+    function downloadCSV() {
+  const output = document.getElementById("output").value.trim();
+  if (!output) return alert("Нет данных для экспорта");
+
+  const countries = output.split(" ");
+  let csvContent = "Geo;Rate\n"; // заголовки CSV с разделителем ;
+
+  countries.forEach(code => {
+    csvContent += `${code};0,001\n`; // добавляем каждую страну с Rate
+  });
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", "countries.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+    document.getElementById("inputText").addEventListener("input", extractCountries);
+  </script>
+</body>
+</html>

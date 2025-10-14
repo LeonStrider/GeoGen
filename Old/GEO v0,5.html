@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>GEO</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    textarea { width: 100%; height: 100px; margin-bottom: 10px; }
+    button {
+      padding: 8px 16px;
+      margin: 5px 5px 10px 0;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      white-space: nowrap;
+      width: 120px; /* фиксированная ширина кнопки */
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    button.copied {
+      background-color: #28a745 !important; /* зелёный при копировании */
+      transform: scale(1.05); /* лёгкий эффект увеличения */
+    }
+    #output { height: 80px; }
+    #counter { font-size: 14px; margin-top: 5px; color: #333; }
+  </style>
+</head>
+<body>
+  <h2>Geo Generator</h2>
+
+  <!-- Поле для ввода текста -->
+  <textarea id="inputText" placeholder="Вставьте текст..."></textarea><br>
+
+  <!-- Кнопка копирования результата -->
+  <button id="copyBtn" onclick="copyResult()">Копировать</button><br>
+
+  <!-- Поле вывода найденных ISO-кодов стран -->
+  <textarea id="output" readonly placeholder="Здесь появятся ISO-коды стран"></textarea>
+
+  <!-- Счётчик количества найденных стран -->
+  <div id="counter">Найдено стран: 0</div>
+
+  <script>
+    // Словарь стран: варианты написания → ISO-код
+    const countryAliases = {
+      "russia": "RU", "россия": "RU", "ru": "RU",
+      "germany": "DE", "германия": "DE", "de": "DE",
+      "france": "FR", "франция": "FR", "fr": "FR",
+      "united states": "US", "usa": "US", "us": "US", "сша": "US",
+      "china": "CN", "китай": "CN", "cn": "CN"
+    };
+
+    // Функция поиска стран в тексте и вывода ISO-кодов
+    function extractCountries() {
+      const text = document.getElementById("inputText").value.toLowerCase(); // преобразуем текст в нижний регистр
+      let found = new Set(); // используем Set, чтобы не было дубликатов
+
+      // Проходим по всем вариантам написания стран
+      for (let [alias, code] of Object.entries(countryAliases)) {
+        // Регулярное выражение для поиска слова, даже если оно окружено знаками препинания
+        const regex = new RegExp("(^|\\s|\\,|\\.|\\!|\\?|\\:)" + alias + "($|\\s|\\,|\\.|\\!|\\?|\\:)", "i");
+        if (regex.test(text)) {
+          found.add(code); // добавляем ISO-код в результат
+        }
+      }
+
+      // Выводим результат в поле "output" через пробел
+      document.getElementById("output").value =
+        found.size ? Array.from(found).join(" ") : "";
+
+      // Обновляем счётчик найденных стран
+      document.getElementById("counter").innerText =
+        "Найдено стран: " + found.size;
+    }
+
+    // Функция копирования результата в буфер обмена
+    function copyResult() {
+      const output = document.getElementById("output");
+      const copyBtn = document.getElementById("copyBtn");
+
+      if (output.value.trim() !== "") {
+        navigator.clipboard.writeText(output.value).then(() => {
+          const originalText = copyBtn.innerText;
+
+          // Меняем текст и цвет кнопки при копировании
+          copyBtn.innerText = "Скопировано";
+          copyBtn.classList.add("copied");
+
+          // Через 1.5 секунды возвращаем исходный вид кнопки
+          setTimeout(() => {
+            copyBtn.innerText = originalText;
+            copyBtn.classList.remove("copied");
+          }, 1500);
+        });
+      }
+    }
+
+    // Слушатель изменения текста — автоматически ищет страны при вводе
+    document.getElementById("inputText").addEventListener("input", extractCountries);
+  </script>
+</body>
+</html>

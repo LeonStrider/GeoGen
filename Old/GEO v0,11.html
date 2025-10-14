@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>GEO</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    textarea { width: 100%; height: 100px; margin-bottom: 10px; }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 8px 16px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      white-space: nowrap;
+      width: 120px;
+    }
+    button:hover:not(:disabled) {
+      background-color: #0056b3;
+    }
+    button:disabled {
+      background-color: grey;
+      cursor: default;
+    }
+    #output { height: 80px; }
+    input#filenameInput {
+      padding: 5px;
+      min-width: 60px;
+      width: auto;
+    }
+  </style>
+</head>
+<body>
+  <h2>Geo Generator</h2>
+
+  <textarea id="inputText" placeholder="Вставьте текст..."></textarea><br>
+
+  <div class="controls">
+    <button id="copyBtn" onclick="copyResult()">Копировать</button>
+    <button id="downloadBtn" onclick="downloadCSVFromInput()" disabled>Скачать CSV</button>
+    <input type="text" id="filenameInput" placeholder="Имя CSV">
+  </div>
+
+  <textarea id="output" readonly placeholder="Здесь появятся ISO-коды стран"></textarea>
+  <div id="countDisplay"></div>
+
+  <script>
+    const countryAliases = {
+      "russia": "RU", "россия": "RU", "ru": "RU",
+      "germany": "DE", "германия": "DE", "de": "DE",
+      "france": "FR", "франция": "FR", "fr": "FR",
+      "united states": "US", "usa": "US", "us": "US", "сша": "US",
+      "china": "CN", "китай": "CN", "cn": "CN"
+    };
+
+    const filenameInput = document.getElementById("filenameInput");
+
+    function extractCountries() {
+      const text = document.getElementById("inputText").value.toLowerCase();
+      let found = new Set();
+
+      for (let [alias, code] of Object.entries(countryAliases)) {
+        const regex = new RegExp("(^|\\s|,)" + alias + "($|\\s|,)", "i");
+        if (regex.test(text)) {
+          found.add(code);
+        }
+      }
+
+      document.getElementById("output").value = found.size ? Array.from(found).join(" ") : "";
+      document.getElementById("countDisplay").innerText = "Найдено стран: " + found.size;
+      updateDownloadButtonState();
+    }
+
+    function copyResult() {
+      const output = document.getElementById("output");
+      const copyBtn = document.getElementById("copyBtn");
+
+      if (output.value.trim() !== "") {
+        navigator.clipboard.writeText(output.value).then(() => {
+          const originalText = copyBtn.innerText;
+          copyBtn.innerText = "Скопировано";
+          copyBtn.style.backgroundColor = "#28a745";
+          setTimeout(() => {
+            copyBtn.innerText = originalText;
+            copyBtn.style.backgroundColor = "#007BFF";
+          }, 1500);
+        });
+      }
+    }
+
+    function downloadCSVFromInput() {
+      const output = document.getElementById("output").value.trim();
+      const filename = filenameInput.value.trim();
+
+      if (!output || !filename) return;
+
+      let csvContent = "Geo,Rate\n";
+      output.split(" ").forEach(code => {
+        csvContent += `${code},0,001\n`;
+      });
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename + ".csv";
+      link.click();
+    }
+
+    function updateDownloadButtonState() {
+      const textFilled = document.getElementById("output").value.trim() !== "";
+      const filenameFilled = filenameInput.value.trim() !== "";
+      document.getElementById("downloadBtn").disabled = !(textFilled && filenameFilled);
+    }
+
+    let minWidth = null;
+
+    function adjustInputWidth() {
+      const tmpSpan = document.createElement("span");
+      tmpSpan.style.visibility = "hidden";
+      tmpSpan.style.whiteSpace = "pre";
+      tmpSpan.style.font = window.getComputedStyle(filenameInput).font;
+      tmpSpan.textContent = filenameInput.placeholder;
+
+      document.body.appendChild(tmpSpan);
+      if (minWidth === null) {
+        minWidth = tmpSpan.offsetWidth + 20;
+      }
+      document.body.removeChild(tmpSpan);
+
+      const tmpSpanInput = document.createElement("span");
+      tmpSpanInput.style.visibility = "hidden";
+      tmpSpanInput.style.whiteSpace = "pre";
+      tmpSpanInput.style.font = window.getComputedStyle(filenameInput).font;
+      tmpSpanInput.textContent = filenameInput.value || filenameInput.placeholder;
+      document.body.appendChild(tmpSpanInput);
+
+      const newWidth = tmpSpanInput.offsetWidth + 20;
+      document.body.removeChild(tmpSpanInput);
+
+      filenameInput.style.width = Math.max(minWidth, newWidth) + "px";
+    }
+
+    filenameInput.addEventListener("input", () => {
+      adjustInputWidth();
+      updateDownloadButtonState();
+    });
+
+    window.addEventListener("load", adjustInputWidth);
+
+    document.getElementById("inputText").addEventListener("input", extractCountries);
+  </script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>GEO</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    textarea { width: 100%; height: 100px; margin-bottom: 10px; }
+    button {
+      padding: 8px 16px;
+      margin: 5px 5px 10px 0;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      white-space: nowrap;
+      width: 120px; /* фиксированная ширина */
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #output { height: 80px; }
+  </style>
+</head>
+<body>
+  <h2>Geo Generator</h2>
+
+  <textarea id="inputText" placeholder="Вставьте текст..."></textarea><br>
+  <button id="copyBtn" onclick="copyResult()">Копировать</button><br>
+
+  <textarea id="output" readonly placeholder="Здесь появятся ISO-коды стран"></textarea>
+
+  <script>
+    const countryAliases = {
+      "russia": "RU",
+      "россия": "RU",
+      "ru": "RU",
+
+      "germany": "DE",
+      "германия": "DE",
+      "de": "DE",
+
+      "france": "FR",
+      "франция": "FR",
+      "fr": "FR",
+
+      "united states": "US",
+      "usa": "US",
+      "us": "US",
+      "сша": "US",
+
+      "china": "CN",
+      "китай": "CN",
+      "cn": "CN"
+    };
+
+    function extractCountries() {
+      const text = document.getElementById("inputText").value.toLowerCase();
+      let found = new Set();
+
+      for (let [alias, code] of Object.entries(countryAliases)) {
+        const regex = new RegExp("(^|\\s)" + alias + "($|\\s)", "i");
+        if (regex.test(text)) {
+          found.add(code);
+        }
+      }
+
+      document.getElementById("output").value =
+        found.size ? Array.from(found).join(", ") : "";
+    }
+
+    function copyResult() {
+      const output = document.getElementById("output");
+      const copyBtn = document.getElementById("copyBtn");
+
+      if (output.value.trim() !== "") {
+        navigator.clipboard.writeText(output.value).then(() => {
+          const originalText = copyBtn.innerText;
+          const originalColor = copyBtn.style.backgroundColor;
+
+          copyBtn.innerText = "Скопировано";
+          copyBtn.style.backgroundColor = "#28a745"; // зелёный цвет
+
+          setTimeout(() => {
+            copyBtn.innerText = originalText;
+            copyBtn.style.backgroundColor = originalColor || "#007BFF";
+          }, 1500);
+        });
+      }
+    }
+
+    document.getElementById("inputText").addEventListener("input", extractCountries);
+  </script>
+</body>
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Geo Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f6fa;
+      color: #333;
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+      color: #007BFF;
+    }
+
+    textarea {
+      width: 100%;
+      height: 120px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      resize: vertical;
+      font-size: 14px;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    input[type="text"] {
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      width: 200px;
+      font-size: 14px;
+      margin-right: 10px;
+    }
+
+    button {
+      padding: 8px 16px;
+      margin: 5px 5px 10px 0;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    button:hover:enabled {
+      opacity: 0.9;
+    }
+
+    #copyBtn {
+      background-color: #007BFF;
+      color: white;
+    }
+
+    #downloadBtn {
+      background-color: #28a745;
+      color: white;
+    }
+
+    button:disabled {
+      background-color: #a0a0a0;
+      cursor: not-allowed;
+    }
+
+    button.copied {
+      background-color: #218838 !important;
+    }
+
+    #output {
+      width: 100%;
+      height: 80px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background: #fff;
+      font-size: 14px;
+      resize: none;
+      margin-top: 10px;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    #counter {
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    label {
+      margin-right: 5px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Geo Generator</h2>
+
+  <textarea id="inputText" placeholder="Вставьте текст..."></textarea>
+
+  <div class="controls">
+    <label for="filenameInput">Имя файла CSV:</label>
+    <input type="text" id="filenameInput" placeholder="example">
+    <button id="copyBtn" onclick="copyResult()">📋 Копировать</button>
+    <button id="downloadBtn" onclick="downloadCSVFromInput()" disabled>⬇ Скачать CSV</button>
+  </div>
+
+  <textarea id="output" readonly placeholder="Здесь появятся ISO-коды стран"></textarea>
+
+  <div id="counter">Найдено стран: 0</div>
+
+  <script>
+    const countryAliases = {
+      "russia": "RU", "россия": "RU", "ru": "RU",
+      "germany": "DE", "германия": "DE", "de": "DE",
+      "france": "FR", "франция": "FR", "fr": "FR",
+      "united states": "US", "usa": "US", "us": "US", "сша": "US",
+      "china": "CN", "китай": "CN", "cn": "CN"
+    };
+
+    const filenameInput = document.getElementById("filenameInput");
+    const downloadBtn = document.getElementById("downloadBtn");
+
+    function extractCountries() {
+      const text = document.getElementById("inputText").value.toLowerCase();
+      let found = new Set();
+
+      for (let [alias, code] of Object.entries(countryAliases)) {
+        const regex = new RegExp("(^|\\s|\\,|\\.|\\!|\\?|\\:)" + alias + "($|\\s|\\,|\\.|\\!|\\?|\\:)", "i");
+        if (regex.test(text)) {
+          found.add(code);
+        }
+      }
+
+      document.getElementById("output").value = found.size ? Array.from(found).join(" ") : "";
+      document.getElementById("counter").innerText = "Найдено стран: " + found.size;
+    }
+
+    function copyResult() {
+      const output = document.getElementById("output");
+      const copyBtn = document.getElementById("copyBtn");
+
+      if (output.value.trim() !== "") {
+        navigator.clipboard.writeText(output.value).then(() => {
+          const originalText = copyBtn.innerText;
+          copyBtn.innerText = "✔ Скопировано";
+          copyBtn.classList.add("copied");
+
+          setTimeout(() => {
+            copyBtn.innerText = originalText;
+            copyBtn.classList.remove("copied");
+          }, 1500);
+        });
+      }
+    }
+
+    function downloadCSV(filename) {
+      const output = document.getElementById("output").value.trim();
+      if (!output) return alert("Нет данных для экспорта");
+
+      const countries = output.split(" ");
+      let csvContent = "Geo;Rate\n";
+      countries.forEach(code => {
+        csvContent += `${code};0,001\n`;
+      });
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", filename + ".csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function downloadCSVFromInput() {
+      const filename = filenameInput.value.trim();
+      if (!filename) {
+        alert("Введите имя файла");
+        return;
+      }
+      downloadCSV(filename);
+    }
+
+    filenameInput.addEventListener("input", () => {
+      downloadBtn.disabled = filenameInput.value.trim() === "";
+    });
+
+    document.getElementById("inputText").addEventListener("input", extractCountries);
+  </script>
+</body>
+</html>

@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>GEO</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+
+    textarea {
+      width: 100%;
+      min-width: 300px;
+      height: 100px;
+      margin-bottom: 10px;
+      resize: vertical;
+    }
+
+    #output {
+      height: 80px;
+      min-width: 300px;
+      resize: vertical;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      padding: 8px 16px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      white-space: nowrap;
+      width: 120px;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #0056b3;
+    }
+
+    button:disabled {
+      background-color: grey;
+      cursor: default;
+    }
+
+    #countDisplay {
+      margin-top: 5px;
+    }
+
+    input#filenameInput {
+      padding: 5px;
+      min-width: 60px;
+      width: auto;
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Geo Generator</h2>
+
+  <!-- Основное поле ввода -->
+  <textarea id="inputText" placeholder="Вставьте текст..."></textarea>
+
+  <!-- Чекбокс исключения RU BY UA -->
+  <label>
+    <input type="checkbox" id="excludeRU">
+    Исключить RU BY UA
+  </label>
+
+  <!-- Поле минус-слов -->
+  <textarea id="excludeText" placeholder="Минус-страны (например: Россия, DE)"></textarea>
+
+  <!-- Кнопки и поле ввода имени файла -->
+  <div class="controls">
+    <button id="copyBtn" onclick="copyResult()">Копировать</button>
+    <button id="downloadBtn" onclick="downloadCSVFromInput()" disabled>Скачать CSV</button>
+    <input type="text" id="filenameInput" placeholder="Имя CSV">
+  </div>
+
+  <!-- Результат и счётчик -->
+  <textarea id="output" readonly placeholder="Здесь появятся ISO-коды стран"></textarea>
+  <div id="countDisplay"></div>
+
+  <script>
+    const countryAliases = {
+      "andorra": "AD", "андорра": "AD", "ad": "AD",
+"united arab emirates": "AE", "оаэ": "AE", "ae": "AE",
+"afghanistan": "AF", "афганистан": "AF", "af": "AF",
+"antigua and barbuda": "AG", "антигуа и барбуда": "AG", "ag": "AG",
+"anguilla": "AI", "ангилья": "AI", "ai": "AI",
+"albania": "AL", "албания": "AL", "al": "AL",
+"armenia": "AM", "армения": "AM", "am": "AM",
+"angola": "AO", "ангола": "AO", "ao": "AO",
+"antarctica": "AQ", "антарктида": "AQ", "aq": "AQ",
+"argentina": "AR", "аргентина": "AR", "ar": "AR",
+"american samoa": "AS", "американское самоа": "AS", "as": "AS",
+"austria": "AT", "австрия": "AT", "at": "AT",
+"australia": "AU", "австралия": "AU", "au": "AU",
+"aruba": "AW", "аруба": "AW", "aw": "AW",
+"åland islands": "AX", "аландские острова": "AX", "ax": "AX",
+"azerbaijan": "AZ", "азербайджан": "AZ", "az": "AZ",
+"bosnia and herzegovina": "BA", "босния и герцеговина": "BA", "ba": "BA", "bosnia and herzegowina": "BA",
+"barbados": "BB", "барбадос": "BB", "bb": "BB",
+"bangladesh": "BD", "бангладеш": "BD", "bd": "BD",
+"belgium": "BE", "бельгия": "BE", "be": "BE",
+"burkina faso": "BF", "буркина-фасо": "BF", "bf": "BF",
+"bulgaria": "BG", "болгария": "BG", "bg": "BG",
+"bahrain": "BH", "бахрейн": "BH", "bh": "BH",
+"burundi": "BI", "бурунди": "BI", "bi": "BI",
+"benin": "BJ", "бенин": "BJ", "bj": "BJ",
+"saint barthélemy": "BL", "сен-бартелеми": "BL", "bl": "BL",
+"bermuda": "BM", "бермуды": "BM", "bm": "BM",
+"brunei darussalam": "BN", "бруней": "BN", "bn": "BN", "brunei": "BN",
+"bolivia": "BO", "боливия": "BO", "bo": "BO",
+"bonaire, sint eustatius and saba": "BQ", "бонайре, синт-эстатиус и саба": "BQ", "bq": "BQ", "bonaire/sint eustatius/saba": "BQ", "bonaire, sint eustatius, and saba": "BQ",
+"brazil": "BR", "бразилия": "BR", "br": "BR",
+"bahamas": "BS", "багамские острова": "BS", "bs": "BS",
+"bhutan": "BT", "бутан": "BT", "bt": "BT",
+"bouvet island": "BV", "остров буве": "BV", "bv": "BV",
+"botswana": "BW", "ботсвана": "BW", "bw": "BW",
+"belarus": "BY", "беларусь": "BY", "by": "BY",
+"belize": "BZ", "белиз": "BZ", "bz": "BZ",
+"canada": "CA", "канада": "CA", "ca": "CA",
+"cocos (keeling) islands": "CC", "кокосовые острова": "CC", "cc": "CC",
+"democratic republic of the congo": "CD", "др конго": "CD", "cd": "CD", "dr congo": "CD",
+"central african republic": "CF", "цар": "CF", "cf": "CF",
+"congo": "CG", "республика конго": "CG", "cg": "CG", "congo republic": "CG",
+"switzerland": "CH", "швейцария": "CH", "ch": "CH",
+"côte d'ivoire": "CI", "кот-д’ивуар": "CI", "ci": "CI", "cote d ivoire": "CI", "ivory coast": "CI",
+"cook islands": "CK", "острова кука": "CK", "ck": "CK",
+"chile": "CL", "чили": "CL", "cl": "CL",
+"cameroon": "CM", "камерун": "CM", "cm": "CM",
+"china": "CN", "китай (китайская народная республика)": "CN", "cn": "CN",
+"colombia": "CO", "колумбия": "CO", "co": "CO",
+"costa rica": "CR", "коста-рика": "CR", "cr": "CR",
+"cuba": "CU", "куба": "CU", "cu": "CU",
+"cabo verde": "CV", "кабо-верде": "CV", "cv": "CV",
+"curaçao": "CW", "кюрасао": "CW", "cw": "CW",
+"christmas island": "CX", "остров рождества": "CX", "cx": "CX",
+"cyprus": "CY", "кипр": "CY", "cy": "CY",
+"czechia": "CZ", "чехия": "CZ", "cz": "CZ", "czech republic": "CZ",
+"germany": "DE", "германия": "DE", "de": "DE",
+"djibouti": "DJ", "джибути": "DJ", "dj": "DJ",
+"denmark": "DK", "дания": "DK", "dk": "DK",
+"dominica": "DM", "доминика": "DM", "dm": "DM",
+"dominican republic": "DO", "доминиканская республика": "DO", "do": "DO",
+"algeria": "DZ", "алжир": "DZ", "dz": "DZ",
+"ecuador": "EC", "эквадор": "EC", "ec": "EC",
+"estonia": "EE", "эстония": "EE", "ee": "EE",
+"egypt": "EG", "египет": "EG", "eg": "EG",
+"western sahara": "EH", "садр": "EH", "eh": "EH",
+"eritrea": "ER", "эритрея": "ER", "er": "ER",
+"spain": "ES", "испания": "ES", "es": "ES",
+"ethiopia": "ET", "эфиопия": "ET", "et": "ET",
+"finland": "FI", "финляндия": "FI", "fi": "FI",
+"fiji": "FJ", "фиджи": "FJ", "fj": "FJ",
+"falkland islands": "FK", "фолклендские острова": "FK", "fk": "FK",
+"micronesia": "FM", "микронезия": "FM", "fm": "FM", "federated states of micronesia": "FM",
+"faroe islands": "FO", "фарерские острова": "FO", "fo": "FO",
+"france": "FR", "франция": "FR", "fr": "FR",
+"gabon": "GA", "габон": "GA", "ga": "GA",
+"united kingdom": "GB", "великобритания": "GB", "gb": "GB",
+"grenada": "GD", "гренада": "GD", "gd": "GD",
+"georgia": "GE", "грузия": "GE", "ge": "GE",
+"french guiana": "GF", "гвиана": "GF", "gf": "GF",
+"guernsey": "GG", "гернси": "GG", "gg": "GG",
+"ghana": "GH", "гана": "GH", "gh": "GH",
+"gibraltar": "GI", "гибралтар": "GI", "gi": "GI",
+"greenland": "GL", "гренландия": "GL", "gl": "GL",
+"gambia": "GM", "гамбия": "GM", "gm": "GM",
+"guinea": "GN", "гвинея": "GN", "gn": "GN",
+"guadeloupe": "GP", "гваделупа": "GP", "gp": "GP",
+"equatorial guinea": "GQ", "экваториальная гвинея": "GQ", "gq": "GQ",
+"greece": "GR", "греция": "GR", "gr": "GR",
+"south georgia and the south sandwich islands": "GS", "южная георгия и южные сандвичевы острова": "GS", "gs": "GS",
+"guatemala": "GT", "гватемала": "GT", "gt": "GT",
+"guam": "GU", "гуам": "GU", "gu": "GU",
+"guinea-bissau": "GW", "гвинея-бисау": "GW", "gw": "GW",
+"guyana": "GY", "гайана": "GY", "gy": "GY",
+"hong kong": "HK", "гонконг": "HK", "hk": "HK",
+"heard island and mcdonald islands": "HM", "херд и макдональд": "HM", "hm": "HM",
+"honduras": "HN", "гондурас": "HN", "hn": "HN",
+"croatia": "HR", "хорватия": "HR", "hr": "HR",
+"haiti": "HT", "гаити": "HT", "ht": "HT",
+"hungary": "HU", "венгрия": "HU", "hu": "HU",
+"indonesia": "ID", "индонезия": "ID", "id": "ID",
+"ireland": "IE", "ирландия": "IE", "ie": "IE",
+"israel": "IL", "израиль": "IL", "il": "IL",
+"isle of man": "IM", "остров мэн": "IM", "im": "IM",
+"india": "IN", "индия": "IN", "in": "IN",
+"british indian ocean territory": "IO", "британская территория в индийском океане": "IO", "io": "IO",
+"iraq": "IQ", "ирак": "IQ", "iq": "IQ",
+"iran": "IR", "иран": "IR", "ir": "IR",
+"iceland": "IS", "исландия": "IS", "is": "IS",
+"italy": "IT", "италия": "IT", "it": "IT",
+"jersey": "JE", "джерси": "JE", "je": "JE",
+"jamaica": "JM", "ямайка": "JM", "jm": "JM",
+"jordan": "JO", "иордания": "JO", "jo": "JO",
+"japan": "JP", "япония": "JP", "jp": "JP",
+"kenya": "KE", "кения": "KE", "ke": "KE",
+"kyrgyzstan": "KG", "кыргызстан": "KG", "kg": "KG",
+"cambodia": "KH", "камбоджа": "KH", "kh": "KH",
+"kiribati": "KI", "кирибати": "KI", "ki": "KI",
+"comoros": "KM", "коморы": "KM", "km": "KM",
+"saint kitts and nevis": "KN", "сент-китс и невис": "KN", "kn": "KN", "st kitts and nevis": "KN",
+"democratic people's republic of korea": "KP", "кндр (корейская народно-демократическая республика)": "KP", "kp": "KP", "north korea": "KP",
+"korea": "KR", "республика корея": "KR", "kr": "KR", "south korea": "KR",
+"kuwait": "KW", "кувейт": "KW", "kw": "KW",
+"cayman islands": "KY", "острова кайман": "KY", "ky": "KY",
+"kazakhstan": "KZ", "казахстан": "KZ", "kz": "KZ",
+"lao people's democratic republic": "LA", "лаос": "LA", "la": "LA", "lao peoples democratic republic": "LA", "laos": "LA",
+"lebanon": "LB", "ливан": "LB", "lb": "LB",
+"saint lucia": "LC", "сент-люсия": "LC", "lc": "LC",
+"liechtenstein": "LI", "лихтенштейн": "LI", "li": "LI",
+"sri lanka": "LK", "шри-ланка": "LK", "lk": "LK",
+"liberia": "LR", "либерия": "LR", "lr": "LR",
+"lesotho": "LS", "лесото": "LS", "ls": "LS",
+"lithuania": "LT", "литва": "LT", "lt": "LT",
+"luxembourg": "LU", "люксембург": "LU", "lu": "LU",
+"latvia": "LV", "латвия": "LV", "lv": "LV",
+"libya": "LY", "ливия": "LY", "ly": "LY", "libyan arab jamahiriya": "LY",
+"morocco": "MA", "марокко": "MA", "ma": "MA",
+"monaco": "MC", "монако": "MC", "mc": "MC",
+"moldova": "MD", "молдова": "MD", "md": "MD",
+"montenegro": "ME", "черногория": "ME", "me": "ME",
+"saint martin": "MF", "сен-мартен": "MF", "mf": "MF",
+"madagascar": "MG", "мадагаскар": "MG", "mg": "MG",
+"marshall islands": "MH", "маршалловы острова": "MH", "mh": "MH",
+"north macedonia": "MK", "северная македония": "MK", "mk": "MK", "macedonia": "MK",
+"mali": "ML", "мали": "ML", "ml": "ML",
+"myanmar": "MM", "мьянма": "MM", "mm": "MM",
+"mongolia": "MN", "монголия": "MN", "mn": "MN",
+"macao": "MO", "макао": "MO", "mo": "MO",
+"northern mariana islands": "MP", "северные марианские острова": "MP", "mp": "MP",
+"martinique": "MQ", "мартиника": "MQ", "mq": "MQ",
+"mauritania": "MR", "мавритания": "MR", "mr": "MR",
+"montserrat": "MS", "монтсеррат": "MS", "ms": "MS",
+"malta": "MT", "мальта": "MT", "mt": "MT",
+"mauritius": "MU", "маврикий": "MU", "mu": "MU",
+"maldives": "MV", "мальдивы": "MV", "mv": "MV",
+"malawi": "MW", "малави": "MW", "mw": "MW",
+"mexico": "MX", "мексика": "MX", "mx": "MX",
+"malaysia": "MY", "малайзия": "MY", "my": "MY",
+"mozambique": "MZ", "мозамбик": "MZ", "mz": "MZ",
+"namibia": "NA", "намибия": "NA", "na": "NA",
+"new caledonia": "NC", "новая каледония": "NC", "nc": "NC",
+"niger": "NE", "нигер": "NE", "ne": "NE",
+"norfolk island": "NF", "остров норфолк": "NF", "nf": "NF",
+"nigeria": "NG", "нигерия": "NG", "ng": "NG",
+"nicaragua": "NI", "никарагуа": "NI", "ni": "NI",
+"netherlands": "NL", "нидерланды": "NL", "nl": "NL",
+"norway": "NO", "норвегия": "NO", "no": "NO",
+"nepal": "NP", "непал": "NP", "np": "NP",
+"nauru": "NR", "науру": "NR", "nr": "NR",
+"niue": "NU", "ниуэ": "NU", "nu": "NU",
+"new zealand": "NZ", "новая зеландия": "NZ", "nz": "NZ",
+"oman": "OM", "оман": "OM", "om": "OM",
+"panama": "PA", "панама": "PA", "pa": "PA",
+"peru": "PE", "перу": "PE", "pe": "PE",
+"french polynesia": "PF", "французская полинезия": "PF", "pf": "PF",
+"papua new guinea": "PG", "папуа — новая гвинея": "PG", "pg": "PG",
+"philippines": "PH", "филиппины": "PH", "ph": "PH",
+"pakistan": "PK", "пакистан": "PK", "pk": "PK",
+"poland": "PL", "польша": "PL", "pl": "PL",
+"saint pierre and miquelon": "PM", "сен-пьер и микелон": "PM", "pm": "PM", "st. pierre and miquelon": "PM",
+"pitcairn": "PN", "острова питкэрн": "PN", "pn": "PN",
+"puerto rico": "PR", "пуэрто-рико": "PR", "pr": "PR",
+"palestine, state of": "PS", "государство палестина": "PS", "ps": "PS", "palestinian territories": "PS", "palestine": "PS",
+"portugal": "PT", "португалия": "PT", "pt": "PT",
+"palau": "PW", "палау": "PW", "pw": "PW",
+"paraguay": "PY", "парагвай": "PY", "py": "PY",
+"qatar": "QA", "катар": "QA", "qa": "QA",
+"réunion": "RE", "реюньон": "RE", "re": "RE",
+"romania": "RO", "румыния": "RO", "ro": "RO",
+"serbia": "RS", "сербия": "RS", "rs": "RS",
+"russian federation": "RU", "россия": "RU", "ru": "RU", "russia": "RU",
+"rwanda": "RW", "руанда": "RW", "rw": "RW",
+"saudi arabia": "SA", "саудовская аравия": "SA", "sa": "SA",
+"solomon islands": "SB", "соломоновы острова": "SB", "sb": "SB",
+"seychelles": "SC", "сейшельские острова": "SC", "sc": "SC",
+"sudan": "SD", "судан": "SD", "sd": "SD",
+"sweden": "SE", "швеция": "SE", "se": "SE",
+"singapore": "SG", "сингапур": "SG", "sg": "SG",
+"saint helena, ascension and tristan da cunha": "SH", "остров святой елены": "SH", "sh": "SH", "saint helena": "SH",
+"slovenia": "SI", "словения": "SI", "si": "SI",
+"svalbard and jan mayen": "SJ", "шпицберген и ян-майен": "SJ", "sj": "SJ",
+"slovakia": "SK", "словакия": "SK", "sk": "SK",
+"sierra leone": "SL", "сьерра-леоне": "SL", "sl": "SL",
+"san marino": "SM", "сан-марино": "SM", "sm": "SM",
+"senegal": "SN", "сенегал": "SN", "sn": "SN",
+"somalia": "SO", "сомали": "SO", "so": "SO",
+"suriname": "SR", "суринам": "SR", "sr": "SR",
+"south sudan": "SS", "южный судан": "SS", "ss": "SS",
+"sao tome and principe": "ST", "сан-томе и принсипи": "ST", "st": "ST",
+"el salvador": "SV", "сальвадор": "SV", "sv": "SV",
+"sint maarten": "SX", "синт-мартен": "SX", "sx": "SX",
+"syrian arab republic": "SY", "сирия": "SY", "sy": "SY", "syria": "SY",
+"eswatini": "SZ", "эсватини": "SZ", "sz": "SZ", "swaziland": "SZ",
+"turks and caicos islands": "TC", "теркс и кайкос": "TC", "tc": "TC",
+"chad": "TD", "чад": "TD", "td": "TD",
+"french southern territories": "TF", "французские южные и антарктические территории": "TF", "tf": "TF",
+"togo": "TG", "того": "TG", "tg": "TG",
+"thailand": "TH", "таиланд": "TH", "th": "TH",
+"tajikistan": "TJ", "таджикистан": "TJ", "tj": "TJ",
+"tokelau": "TK", "токелау": "TK", "tk": "TK",
+"timor-leste": "TL", "восточный тимор": "TL", "tl": "TL",
+"turkmenistan": "TM", "туркменистан": "TM", "tm": "TM",
+"tunisia": "TN", "тунис": "TN", "tn": "TN",
+"tonga": "TO", "тонга": "TO", "to": "TO",
+"türkiye": "TR", "турция": "TR", "tr": "TR",
+"trinidad and tobago": "TT", "тринидад и тобаго": "TT", "tt": "TT",
+"tuvalu": "TV", "тувалу": "TV", "tv": "TV",
+"taiwan": "TW", "китайская республика (тайвань)": "TW", "tw": "TW", "taiwan province of china": "TW",
+"tanzania, the united republic of": "TZ", "танзания": "TZ", "tz": "TZ", "tanzania": "TZ", "tanzania": "TZ",
+"ukraine": "UA", "украина": "UA", "ua": "UA",
+"uganda": "UG", "уганда": "UG", "ug": "UG",
+"united states minor outlying islands": "UM", "внешние малые острова сша": "UM", "um": "UM",
+"united states of america": "US", "сша": "US", "us": "US", "united states": "US",
+"uruguay": "UY", "уругвай": "UY", "uy": "UY",
+"uzbekistan": "UZ", "узбекистан": "UZ", "uz": "UZ",
+"holy see": "VA", "ватикан": "VA", "va": "VA", "vatican city": "VA",
+"saint vincent and the grenadines": "VC", "сент-винсент и гренадины": "VC", "vc": "VC", "st vincent and grenadines": "VC",
+"venezuela": "VE", "венесуэла": "VE", "ve": "VE",
+"virgin islands (british)": "VG", "виргинские острова (великобритания)": "VG", "vg": "VG", "british virgin islands": "VG",
+"virgin islands (u.s.)": "VI", "виргинские острова (сша)": "VI", "vi": "VI", "us virgin islands": "VI", "u.s. virgin islands": "VI",
+"viet nam": "VN", "вьетнам": "VN", "vn": "VN", "vietnam": "VN",
+"vanuatu": "VU", "вануату": "VU", "vu": "VU",
+"wallis and futuna": "WF", "уоллис и футуна": "WF", "wf": "WF",
+"samoa": "WS", "самоа": "WS", "ws": "WS",
+"yemen": "YE", "йемен": "YE", "ye": "YE",
+"mayotte": "YT", "майотта": "YT", "yt": "YT",
+"south africa": "ZA", "юар": "ZA", "za": "ZA",
+"zambia": "ZM", "замбия": "ZM", "zm": "ZM",
+"zimbabwe": "ZW", "зимбабве": "ZW", "zw": "ZW",
+"kosovo": "XK", "косово": "XK", "xk": "XK",
+"o1": "O1",
+"uk": "UK",
+"un": "UN",
+"eu": "EU",
+	  
+    };
+
+    const filenameInput = document.getElementById("filenameInput");
+
+    function extractCountries() {
+      const text = document.getElementById("inputText").value.toLowerCase();
+      const excludeText = document.getElementById("excludeText").value.toLowerCase();
+      const excludeRU = document.getElementById("excludeRU").checked;
+      let found = new Set();
+      let excludeSet = new Set();
+
+      // Поиск стран в тексте
+      for (let [alias, code] of Object.entries(countryAliases)) {
+        const regex = new RegExp("(^|\\s|,)" + alias + "($|\\s|,)", "i");
+        if (regex.test(text)) {
+          found.add(code);
+        }
+      }
+
+      // Поиск стран для исключения
+      for (let [alias, code] of Object.entries(countryAliases)) {
+        const regex = new RegExp("(^|\\s|,)" + alias + "($|\\s|,)", "i");
+        if (regex.test(excludeText)) {
+          excludeSet.add(code);
+        }
+      }
+
+      // Исключение RU BY UA при включенном чекбоксе
+      if (excludeRU) {
+        excludeSet.add("RU");
+        excludeSet.add("BY");
+        excludeSet.add("UA");
+      }
+
+      // Удаление исключённых стран
+      excludeSet.forEach(code => found.delete(code));
+
+      document.getElementById("output").value = found.size ? Array.from(found).join(" ") : "";
+      document.getElementById("countDisplay").innerText = "Найдено стран: " + found.size;
+      updateDownloadButtonState();
+    }
+
+    function copyResult() {
+      const output = document.getElementById("output");
+      const copyBtn = document.getElementById("copyBtn");
+
+      if (output.value.trim() !== "") {
+        navigator.clipboard.writeText(output.value).then(() => {
+          const originalText = copyBtn.innerText;
+          copyBtn.innerText = "Скопировано";
+          copyBtn.style.backgroundColor = "#28a745";
+          setTimeout(() => {
+            copyBtn.innerText = originalText;
+            copyBtn.style.backgroundColor = "#007BFF";
+          }, 1500);
+        });
+      }
+    }
+
+    function downloadCSVFromInput() {
+      const output = document.getElementById("output").value.trim();
+      const filename = filenameInput.value.trim();
+
+      if (!output || !filename) return;
+
+      let csvContent = "Geo,Rate\n";
+      output.split(" ").forEach(code => {
+        csvContent += `${code},0,001\n`;
+      });
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename + ".csv";
+      link.click();
+    }
+
+    function updateDownloadButtonState() {
+      const textFilled = document.getElementById("output").value.trim() !== "";
+      const filenameFilled = filenameInput.value.trim() !== "";
+      document.getElementById("downloadBtn").disabled = !(textFilled && filenameFilled);
+    }
+
+    filenameInput.addEventListener("input", updateDownloadButtonState);
+    document.getElementById("inputText").addEventListener("input", extractCountries);
+    document.getElementById("excludeText").addEventListener("input", extractCountries);
+    document.getElementById("excludeRU").addEventListener("change", extractCountries);
+  </script>
+</body>
+</html>
