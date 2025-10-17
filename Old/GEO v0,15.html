@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>GEO</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+
+    textarea {
+      width: 100%;
+      min-width: 300px;
+      height: 100px;
+      margin-bottom: 10px;
+      resize: vertical;
+    }
+
+    #output {
+      height: 80px;
+      min-width: 300px;
+      resize: vertical;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      padding: 8px 16px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      white-space: nowrap;
+      width: 120px;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #0056b3;
+    }
+
+    button:disabled {
+      background-color: grey;
+      cursor: default;
+    }
+
+    #countDisplay {
+      margin-top: 5px;
+    }
+
+    input#filenameInput {
+      padding: 5px;
+      min-width: 60px;
+      width: auto;
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Geo Generator</h2>
+
+  <!-- Основное поле ввода -->
+  <textarea id="inputText" placeholder="Вставьте текст..."></textarea>
+  
+  <!-- Кнопка Очистить -->
+	<div style="margin: 5px 0;">
+  <button id="clearBtn" onclick="clearInput()">Очистить</button>
+</div>
+
+  <!-- Чекбокс исключения RU BY UA -->
+  <label>
+    <input type="checkbox" id="excludeRU">
+    Исключить RU BY UA
+  </label>
+
+  <!-- Поле минус-слов -->
+  <textarea id="excludeText" placeholder="Минус-страны (например: Россия, DE)"></textarea>
+
+  <!-- Кнопки и поле ввода имени файла -->
+  <div class="controls">
+    <button id="copyBtn" onclick="copyResult()">Копировать</button>
+    <button id="downloadBtn" onclick="downloadCSVFromInput()" disabled>Скачать CSV</button>
+    <input type="text" id="filenameInput" placeholder="Имя CSV">
+  </div>
+
+  <!-- Результат и счётчик -->
+  <textarea id="output" readonly placeholder="Здесь появятся ISO-коды стран"></textarea>
+  <div id="countDisplay"></div>
+  
+ <!-- Ссылка на библиотеку в файле isolibrary -->
+<script src="isolibrary.js"></script>
+
+
+  <script>
+    const filenameInput = document.getElementById("filenameInput");
+
+    function extractCountries() {
+      const text = document.getElementById("inputText").value.toLowerCase();
+      const excludeText = document.getElementById("excludeText").value.toLowerCase();
+      const excludeRU = document.getElementById("excludeRU").checked;
+      let found = new Set();
+      let excludeSet = new Set();
+      let matchedRanges = []; // диапазоны занятых совпадений
+
+      // сортируем алиасы по длине (длинные сначала)
+      const aliases = Object.entries(countryAliases).sort((a, b) => b[0].length - a[0].length);
+
+      // Поиск стран в тексте
+      for (let [alias, code] of aliases) {
+        const regex = new RegExp("\\b" + alias + "\\b", "gi");
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+          const start = match.index;
+          const end = start + match[0].length;
+
+          // Проверяем, пересекается ли новый матч с уже найденными
+          if (!matchedRanges.some(r => !(end <= r[0] || start >= r[1]))) {
+            found.add(code);
+            matchedRanges.push([start, end]);
+          }
+        }
+      }
+
+      // Поиск стран для исключения
+      for (let [alias, code] of aliases) {
+        const regex = new RegExp("\\b" + alias + "\\b", "gi");
+        if (regex.test(excludeText)) {
+          excludeSet.add(code);
+        }
+      }
+
+      // Исключение RU BY UA при включенном чекбоксе
+      if (excludeRU) {
+        excludeSet.add("RU");
+        excludeSet.add("BY");
+        excludeSet.add("UA");
+      }
+
+      // Удаление исключённых стран
+      excludeSet.forEach(code => found.delete(code));
+
+      document.getElementById("output").value = found.size ? Array.from(found).join(" ") : "";
+      document.getElementById("countDisplay").innerText = "Найдено стран: " + found.size;
+      updateDownloadButtonState();
+    }
+
+    function copyResult() {
+      const output = document.getElementById("output");
+      const copyBtn = document.getElementById("copyBtn");
+
+      if (output.value.trim() !== "") {
+        navigator.clipboard.writeText(output.value).then(() => {
+          const originalText = copyBtn.innerText;
+          copyBtn.innerText = "Скопировано";
+          copyBtn.style.backgroundColor = "#28a745";
+          setTimeout(() => {
+            copyBtn.innerText = originalText;
+            copyBtn.style.backgroundColor = "#007BFF";
+          }, 1500);
+        });
+      }
+    }
+
+    function downloadCSVFromInput() {
+      const output = document.getElementById("output").value.trim();
+      const filename = filenameInput.value.trim();
+
+      if (!output || !filename) return;
+
+      let csvContent = "Geo,Rate\n";
+      output.split(" ").forEach(code => {
+        csvContent += `${code},0,001\n`;
+      });
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename + ".csv";
+      link.click();
+    }
+	
+	function clearInput() {
+  document.getElementById("inputText").value = "";
+  extractCountries(); // сразу обновляем вывод
+}
+
+
+    function updateDownloadButtonState() {
+      const textFilled = document.getElementById("output").value.trim() !== "";
+      const filenameFilled = filenameInput.value.trim() !== "";
+      document.getElementById("downloadBtn").disabled = !(textFilled && filenameFilled);
+    }
+
+    filenameInput.addEventListener("input", updateDownloadButtonState);
+    document.getElementById("inputText").addEventListener("input", extractCountries);
+    document.getElementById("excludeText").addEventListener("input", extractCountries);
+    document.getElementById("excludeRU").addEventListener("change", extractCountries);
+  </script>
+</body>
+</html>
