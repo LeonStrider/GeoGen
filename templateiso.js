@@ -16,7 +16,8 @@ const geoTemplates = {
   "UTC+(6-8)": ["BD","BT","IO","KG","MM","NP","ID","KH","LA","TH","VN","BN","CN","HK","MN","MO","MY","PH","SG","TW"],
   "UTC+(9-11)": ["JP","KR","PW","TL","KP","AU","GU","MP","PG","FM","NC","SB","VU","NF"],
   "UTC+(12-14)": ["FJ","MH","NR","NZ","TV","WF","AQ","AS","TO","WS","TK","CK","KI","PF"],
-  "UTC+(18-20)": ["BZ","CR","GT","HN","NI","SV","CO","EC","JM","KY","MX","PA","PE","AG","AI","AW","BB","BL","BM","BO","BQ","BS","CA","CL","CU","CW","DM","DO","GD","GP","GY","HT","KN","LC","MF","MQ","MS","PR","PY","SX","TC","TT","US","VC","VE","VG","VI"],
-  "UTC+(21-23)": ["AR","BR","FK","GF","SR","UY","GL","PM","CV"],
+  "UTC-(4-6)": ["BZ","CR","GT","HN","NI","SV","CO","EC","JM","KY","MX","PA","PE","AG","AI","AW","BB","BL","BM","BO","BQ","BS","CA","CL","CU","CW","DM","DO","GD","GP","GY","HT","KN","LC","MF","MQ","MS","PR","PY","SX","TC","TT","US","VC","VE","VG","VI"],
+  "UTC-(1-3)": ["AR","BR","FK","GF","SR","UY","GL","PM","CV"],
   };
+
 
