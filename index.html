@@ -146,25 +146,26 @@
       }
     }
 
-    // --- Применение шаблона Гео (добавление стран без дубликатов) ---
-    function applyGeoTemplate() {
-      const select = document.getElementById("geoTemplateSelect");
-      const selectedTemplate = select.value;
-      const input = document.getElementById("inputText");
-      const currentText = input.value.trim();
-      const currentCodes = new Set(currentText.split(/\s+/).filter(Boolean));
+    // --- Применение шаблона Гео (добавление стран с новой строки, дубликаты сохраняются) ---
+function applyGeoTemplate() {
+  const select = document.getElementById("geoTemplateSelect");
+  const selectedTemplate = select.value;
+  const input = document.getElementById("inputText");
 
-      if (geoTemplates[selectedTemplate]) {
-        const newCodes = geoTemplates[selectedTemplate];
-        newCodes.forEach(code => currentCodes.add(code));
-      }
-
-      input.value = Array.from(currentCodes).join(" ");
-      extractCountries();
-
-      // сброс выбора, чтобы можно было выбрать тот же шаблон снова
-      select.selectedIndex = 0;
+  if (geoTemplates[selectedTemplate]) {
+    const newCodes = geoTemplates[selectedTemplate];
+    // добавляем новую строку, если поле не пустое
+    if (input.value.trim() !== "") {
+      input.value += "\n";
     }
+    input.value += newCodes.join(" ");
+  }
+
+  extractCountries();
+
+  // сброс выбора, чтобы можно было выбрать тот же шаблон снова
+  select.selectedIndex = 0;
+}
 
     // --- Основная логика поиска стран ---
     function extractCountries() {
@@ -267,5 +268,6 @@
   </script>
 </body>
 </html>
+
 
 
