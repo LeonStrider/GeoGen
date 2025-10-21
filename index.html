@@ -73,10 +73,10 @@
   </style>
 </head>
 <body>
-  <h2>Geo Generator v1.0</h2>
+  <h2>Geo Generator v1.1</h2>
 
   <!-- Основное поле ввода -->
-  <textarea id="inputText" placeholder="Вставьте текст..."></textarea>
+  <textarea id="inputText" placeholder="Вставьте текст или коды стран..."></textarea>
   
   <!-- Кнопка Очистить -->
   <div style="margin: 5px 0;">
@@ -86,6 +86,10 @@
   <!-- Выпадающий список исключений -->
   <label for="excludeGroupSelect">Группа исключений:</label>
   <select id="excludeGroupSelect"></select>
+
+  <!-- Выпадающий список шаблонов Гео -->
+  <label for="geoTemplateSelect">Шаблоны Гео:</label>
+  <select id="geoTemplateSelect"></select>
 
   <!-- Поле минус-слов -->
   <textarea id="excludeText" placeholder="Минус-страны (например: Россия, DE)"></textarea>
@@ -101,14 +105,15 @@
   <textarea id="output" readonly placeholder="Здесь появятся ISO-коды стран"></textarea>
   <div id="countDisplay"></div>
 
-  <!-- Ссылки на библиотеки -->
-  <script src="./isolibrary.js"></script>
-  <script src="./excludeiso.js"></script> <!-- Здесь подключаем файл с группами -->
+  <!-- Подключаем библиотеки -->
+  <script src="./isolibrary.js"></script>  <!-- Библиотека стран -->
+  <script src="./excludeiso.js"></script>  <!-- Библиотека исключений -->
+  <script src="./templateiso.js"></script>   <!-- Библиотека шаблонов -->
 
   <script>
     const filenameInput = document.getElementById("filenameInput");
 
-    // Заполняем выпадающий список из excludeGroups (ExcludeISO.js)
+    // --- Заполнение списка исключений ---
     function populateExcludeSelect() {
       const select = document.getElementById("excludeGroupSelect");
       select.innerHTML = "";
@@ -121,9 +126,47 @@
       extractCountries(); // сразу обновляем вывод
     }
 
-    populateExcludeSelect();
-    document.getElementById("excludeGroupSelect").addEventListener("change", extractCountries);
+    // --- Заполнение списка шаблонов Гео ---
+    function populateGeoTemplates() {
+      const select = document.getElementById("geoTemplateSelect");
+      select.innerHTML = "";
 
+      // плейсхолдер
+      const placeholder = document.createElement("option");
+      placeholder.text = "— Выберите шаблон —";
+      placeholder.disabled = true;
+      placeholder.selected = true;
+      select.appendChild(placeholder);
+
+      for (const templateName in geoTemplates) {
+        const option = document.createElement("option");
+        option.value = templateName;
+        option.text = templateName;
+        select.appendChild(option);
+      }
+    }
+
+    // --- Применение шаблона Гео (добавление стран без дубликатов) ---
+    function applyGeoTemplate() {
+      const select = document.getElementById("geoTemplateSelect");
+      const selectedTemplate = select.value;
+      const input = document.getElementById("inputText");
+      const currentText = input.value.trim();
+      const currentCodes = new Set(currentText.split(/\s+/).filter(Boolean));
+
+      if (geoTemplates[selectedTemplate]) {
+        const newCodes = geoTemplates[selectedTemplate];
+        newCodes.forEach(code => currentCodes.add(code));
+      }
+
+      input.value = Array.from(currentCodes).join(" ");
+      extractCountries();
+
+      // сброс выбора, чтобы можно было выбрать тот же шаблон снова
+      select.selectedIndex = 0;
+    }
+
+    // --- Основная логика поиска стран ---
     function extractCountries() {
       const text = document.getElementById("inputText").value.toLowerCase();
       const excludeText = document.getElementById("excludeText").value.toLowerCase();
@@ -131,10 +174,8 @@
       const excludeSet = new Set();
       const matchedRanges = [];
 
-      // сортировка алиасов по длине (длинные сначала)
       const aliases = Object.entries(countryAliases).sort((a,b)=>b[0].length-a[0].length);
 
-      // Поиск стран в тексте
       for (let [alias, code] of aliases) {
         const regex = new RegExp("\\b"+alias+"\\b","gi");
         let match;
@@ -148,19 +189,16 @@
         }
       }
 
-      // Минус-слова
       for (let [alias, code] of aliases) {
         const regex = new RegExp("\\b"+alias+"\\b","gi");
         if (regex.test(excludeText)) excludeSet.add(code);
       }
 
-      // Исключения из выбранной группы
       const selectedGroup = document.getElementById("excludeGroupSelect").value;
       if (excludeGroups[selectedGroup]) {
         excludeGroups[selectedGroup].forEach(code => excludeSet.add(code));
       }
 
-      // Удаление исключённых
       excludeSet.forEach(code => found.delete(code));
 
       document.getElementById("output").value = found.size ? Array.from(found).join(" ") : "";
@@ -168,6 +206,7 @@
       updateDownloadButtonState();
     }
 
+    // --- Копирование результата ---
     function copyResult() {
       const output = document.getElementById("output");
       const copyBtn = document.getElementById("copyBtn");
@@ -185,10 +224,10 @@
       }
     }
 
+    // --- Скачивание CSV ---
     function downloadCSVFromInput() {
       const output = document.getElementById("output").value.trim();
       const filename = filenameInput.value.trim();
-
       if (!output || !filename) return;
 
       let csvContent = "Geo,Rate\n";
@@ -203,22 +242,28 @@
       link.click();
     }
 
+    // --- Очистка поля ввода ---
     function clearInput() {
       document.getElementById("inputText").value = "";
       extractCountries();
     }
 
+    // --- Активация кнопки скачивания ---
     function updateDownloadButtonState() {
       const textFilled = document.getElementById("output").value.trim() !== "";
       const filenameFilled = filenameInput.value.trim() !== "";
       document.getElementById("downloadBtn").disabled = !(textFilled && filenameFilled);
     }
 
+    // --- Инициализация ---
+    populateExcludeSelect();
+    populateGeoTemplates();
+
+    document.getElementById("excludeGroupSelect").addEventListener("change", extractCountries);
+    document.getElementById("geoTemplateSelect").addEventListener("change", applyGeoTemplate);
     filenameInput.addEventListener("input", updateDownloadButtonState);
     document.getElementById("inputText").addEventListener("input", extractCountries);
     document.getElementById("excludeText").addEventListener("input", extractCountries);
   </script>
 </body>
 </html>
-
-
