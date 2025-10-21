@@ -75,6 +75,10 @@
 <body>
   <h2>Geo Generator v1.1</h2>
 
+  <!-- Выпадающий список шаблонов Гео -->
+  <label for="geoTemplateSelect">Шаблоны Гео:</label>
+  <select id="geoTemplateSelect"></select>
+  
   <!-- Основное поле ввода -->
   <textarea id="inputText" placeholder="Вставьте текст или коды стран..."></textarea>
   
@@ -86,10 +90,6 @@
   <!-- Выпадающий список исключений -->
   <label for="excludeGroupSelect">Группа исключений:</label>
   <select id="excludeGroupSelect"></select>
-
-  <!-- Выпадающий список шаблонов Гео -->
-  <label for="geoTemplateSelect">Шаблоны Гео:</label>
-  <select id="geoTemplateSelect"></select>
 
   <!-- Поле минус-слов -->
   <textarea id="excludeText" placeholder="Минус-страны (например: Россия, DE)"></textarea>
@@ -267,3 +267,4 @@
   </script>
 </body>
 </html>
+
